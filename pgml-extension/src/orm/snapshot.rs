@@ -288,7 +288,7 @@ impl Snapshot {
 
         match schema_name {
             None => {
-                let table_count = Spi::get_one_with_args::<i64>("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = $1 AND table_schema = 'public'", vec![
+                let table_count = Spi::get_one_with_args::<i64>("SELECT COUNT(*) FROM (select table_name as name, table_schema as schema from information_schema.tables UNION select matviewname as name, schemaname as schema from pg_matviews) relations  WHERE name = $1 AND schema = 'public'", vec![
                     (PgBuiltInOids::TEXTOID.oid(), table_name.clone().into_datum())
                 ]).unwrap();
 
@@ -302,7 +302,8 @@ impl Snapshot {
             }
 
             Some(schema_name) => {
-                let exists = Spi::get_one_with_args::<i64>("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = $1 AND table_schema = $2", vec![
+                let exists = Spi::get_one_with_args::<i64>(
+                        "SELECT COUNT(*) FROM (select table_name as name, table_schema as schema from information_schema.tables UNION select matviewname as name, schemaname as schema from pg_matviews) relations WHERE name = $1 AND schema = $2", vec![
                     (PgBuiltInOids::TEXTOID.oid(), table_name.clone().into_datum()),
                     (PgBuiltInOids::TEXTOID.oid(), schema_name.clone().into_datum()),
                 ]).unwrap();
